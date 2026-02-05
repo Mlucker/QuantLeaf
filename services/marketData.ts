@@ -14,6 +14,7 @@ export interface TickerData {
     totalDebt: number;
     operatingCashFlow: number;
     capitalExpenditures: number;
+    depreciation: number; // Depreciation & Amortization
     dividendRate: number;
     dividendYield: number; // percentage
     earningsGrowth: number; // percentage
@@ -57,6 +58,10 @@ export const getTickerData = async (symbol: string): Promise<TickerData | null> 
 
         // Capex is not always in financialData, so we stick to the annual report or derived
         const capitalExpenditures = cashflow?.capitalExpenditures || 0;
+
+        // Depreciation & Amortization from cash flow statement
+        const depreciation = cashflow?.depreciation || 0;
+
         const netIncomeToCommon = quote.financialData?.netIncome || cashflow?.netIncome || 0; // Prefer TTM Net Income
 
         // Debt/Cash
@@ -82,6 +87,7 @@ export const getTickerData = async (symbol: string): Promise<TickerData | null> 
             totalDebt,
             operatingCashFlow,
             capitalExpenditures,
+            depreciation,
             dividendRate,
             dividendYield,
             earningsGrowth,

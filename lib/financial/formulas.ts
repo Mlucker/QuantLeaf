@@ -8,8 +8,19 @@ export const calculateGrahamNumber = (eps: number, bvps: number): number => {
 };
 
 /**
+ * Calculate dynamic discount rate using CAPM
+ * WACC = Risk-Free Rate + Beta × Market Risk Premium
+ * @param beta Company beta (default 1.0 = market average)
+ */
+export const calculateDiscountRate = (beta: number = 1.0): number => {
+  const riskFreeRate = 0.045; // 4.5% (approximate 10Y Treasury 2026)
+  const marketRiskPremium = 0.06; // 6% historical equity risk premium
+  return riskFreeRate + (beta * marketRiskPremium);
+};
+
+/**
  * 5-Year DCF Shortcut
- * Assumes 5 years of growth + 2% terminal growth
+ * Assumes 5 years of growth + terminal growth based on GDP
  * @param fcf Free Cash Flow
  * @param growth Growth rate (decimal, e.g., 0.10 for 10%)
  * @param discount Discount rate (decimal, e.g., 0.10 for 10%)
@@ -45,8 +56,8 @@ export const calculateSimpleDCF = (fcf: number, growth: number, discount: number
   }
 
   // Terminal Value (simplified: 5th year FCF * (1+g) / (discount - terminal_growth))
-  // Assuming 2% terminal growth
-  const terminalGrowth = 0.02;
+  // Terminal growth = long-term GDP growth (companies can't outgrow economy forever)
+  const terminalGrowth = 0.025; // 2.5% long-term US GDP growth expectation
   // Last year FCF
   const lastFCF = projections[projections.length - 1].fcf;
 
@@ -86,35 +97,42 @@ export const calculateOwnerEarningsYield = (netIncome: number, depreciation: num
 };
 
 /**
- * Peter Lynch Fair Value Formula
- * PEG Ratio concept: Fair P/E = Growth Rate
- * Intrinsic Value = EPS * (Growth Rate + Dividend Yield)
+ * PEG Ratio-Based Fair Value
+ * Peter Lynch's actual rule: Fair P/E = Growth Rate
+ * A PEG ratio of 1.0 indicates fair value
  * 
- * Lynch famously said P/E should equal the growth rate.
- * If Growth is 15%, Fair P/E is 15.
- * Value = EPS * 15.
- * He often added Dividend Yield to Growth for total return.
+ * @param eps Earnings Per Share
+ * @param growthRate Expected growth rate (decimal, e.g., 0.15 for 15%)
+ * @param currentPrice Current stock price (for PEG calculation)
+ * @returns Object with fair value and current PEG ratio
  */
-export const calculatePeterLynchValue = (eps: number, growthRate: number, dividendYield: number): number => {
-  // Growth rate should be percentage whole number for this formula?
-  // Lynch uses: P/E = Growth. So if Growth is 15 (percent), multiplier is 15.
-  // If we have growth as 0.15 (decimal), we verify input format.
+export interface PEGResult {
+  fairValue: number;
+  pegRatio: number;
+  fairPE: number;
+}
 
-  // Let's assume input growthRate is 0.15 for 15%.
-  // We convert to 15.
-  const growth = growthRate * 100;
+export const calculatePEGValue = (eps: number, growthRate: number, currentPrice: number): PEGResult => {
+  if (eps <= 0 || growthRate <= 0) {
+    return { fairValue: 0, pegRatio: 0, fairPE: 0 };
+  }
 
-  // Cap growth to reasonable limits (Lynch liked 10-25%)
-  // But for the formula we use actual.
+  // Convert growth to percentage (0.15 -> 15)
+  const growthPercent = growthRate * 100;
 
-  // If growth is negative, value is 0 (or undefined strategy)
-  if (growth <= 0) return 0;
+  // Lynch's rule: Fair P/E = Growth Rate
+  const fairPE = growthPercent;
+  const fairValue = eps * fairPE;
 
-  // Adjusted Growth (Growth + Dividend Yield)
-  const adjustedGrowth = growth + dividendYield;
+  // Calculate current PEG ratio
+  const currentPE = currentPrice / eps;
+  const pegRatio = currentPE / growthPercent;
 
-  // Value = EPS * Multiplier
-  return eps * adjustedGrowth;
+  return {
+    fairValue,
+    pegRatio,
+    fairPE
+  };
 };
 
 /**

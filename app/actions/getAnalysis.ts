@@ -7,7 +7,7 @@ import {
     getCommodityData, CommodityData,
     getHistoricalData
 } from '@/services/marketData';
-import { calculateGrahamNumber, calculateSimpleDCF, calculateOwnerEarningsYield, calculatePeterLynchValue, calculateDDM } from '@/lib/financial/formulas';
+import { calculateGrahamNumber, calculateSimpleDCF, calculateOwnerEarningsYield, calculatePEGValue, calculateDDM, calculateDiscountRate } from '@/lib/financial/formulas';
 import { fetchUrlData, ScrapedData } from '@/services/urlParser';
 
 export interface GeneralAnalysis {
@@ -30,7 +30,8 @@ export interface AnalysisResult {
         dcfValue: number;
         dcfDetail?: any;
         ownerEarningsYield: number;
-        peterLynchValue: number;
+        pegFairValue: number;
+        pegRatio: number;
         ddmValue: number;
     };
     generalAnalysis?: GeneralAnalysis;
@@ -190,7 +191,7 @@ export async function analyzeTicker(ticker: string, type: string = 'stocks', url
                 scrapedData,
                 generalAnalysis,
                 historicalData,
-                metrics: { grahamNumber: 0, dcfValue: 0, ownerEarningsYield: 0, peterLynchValue: 0, ddmValue: 0 }
+                metrics: { grahamNumber: 0, dcfValue: 0, ownerEarningsYield: 0, pegFairValue: 0, pegRatio: 0, ddmValue: 0 }
             };
         }
 
@@ -209,7 +210,8 @@ export async function analyzeTicker(ticker: string, type: string = 'stocks', url
         if (rawGrowth > 0.15) rawGrowth = 0.15;
 
         const assumedGrowth = rawGrowth;
-        const assumedDiscount = 0.10; // 10% discount rate
+        // Use dynamic discount rate based on CAPM (default beta = 1.0)
+        const assumedDiscount = calculateDiscountRate(1.0); // ~10.5% for market-average risk
 
         // Market Cap = Price * Shares. Shares = Market Cap / Price.
         const sharesOutstanding = tickerData.marketCap / tickerData.price;
@@ -230,14 +232,14 @@ export async function analyzeTicker(ticker: string, type: string = 'stocks', url
 
         const ownerEarningsYield = calculateOwnerEarningsYield(
             tickerData.netIncomeToCommon,
-            0,
+            tickerData.depreciation,
             tickerData.capitalExpenditures,
             tickerData.marketCap
         );
 
-        // Peter Lynch Value
-        const growthForLynch = tickerData.earningsGrowth || assumedGrowth;
-        const peterLynchValue = calculatePeterLynchValue(tickerData.eps, growthForLynch, tickerData.dividendYield);
+        // PEG Ratio-Based Fair Value
+        const growthForPEG = tickerData.earningsGrowth || assumedGrowth;
+        const pegResult = calculatePEGValue(tickerData.eps, growthForPEG, tickerData.price);
 
         // DDM
         const ddmValue = calculateDDM(tickerData.dividendRate, 0.03);
@@ -251,7 +253,8 @@ export async function analyzeTicker(ticker: string, type: string = 'stocks', url
                 dcfValue: dcfResult.value,
                 dcfDetail: { ...dcfResult, usedGrowthRate: assumedGrowth },
                 ownerEarningsYield,
-                peterLynchValue,
+                pegFairValue: pegResult.fairValue,
+                pegRatio: pegResult.pegRatio,
                 ddmValue
             },
             historicalData
@@ -262,7 +265,7 @@ export async function analyzeTicker(ticker: string, type: string = 'stocks', url
             assetType: type as any,
             tickerData: null,
             scrapedData: null,
-            metrics: { grahamNumber: 0, dcfValue: 0, ownerEarningsYield: 0, peterLynchValue: 0, ddmValue: 0 },
+            metrics: { grahamNumber: 0, dcfValue: 0, ownerEarningsYield: 0, pegFairValue: 0, pegRatio: 0, ddmValue: 0 },
             error: 'Failed to analyze'
         };
     }

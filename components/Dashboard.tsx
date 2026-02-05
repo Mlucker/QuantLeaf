@@ -4,6 +4,7 @@ import PriceChart from './PriceChart';
 import TimeRangeFilter from './TimeRangeFilter';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertTriangle } from 'lucide-react';
+import FormulaTooltip from './FormulaTooltip';
 
 export default function Dashboard({ data }: { data: AnalysisResult }) {
     if (data.error) {
@@ -210,7 +211,18 @@ export default function Dashboard({ data }: { data: AnalysisResult }) {
                 </CardHeader>
                 <CardContent>
                     <div className="mt-2">
-                        <div className="text-slate-400 text-sm mb-1">Owner Earnings Yield</div>
+                        <div className="text-slate-400 text-sm mb-1 flex items-center">
+                            Owner Earnings Yield
+                            <FormulaTooltip
+                                formula="(Net Income + D&A - Capex) / Market Cap"
+                                description="The return an owner would theoretically receive if they owned the entire business."
+                                inputs={[
+                                    { label: 'Net Income', value: `$${(tickerData.netIncomeToCommon / 1e9).toFixed(2)}B` },
+                                    { label: 'Capex', value: `$${(Math.abs(tickerData.capitalExpenditures) / 1e9).toFixed(2)}B` },
+                                    { label: 'Market Cap', value: `$${(tickerData.marketCap / 1e9).toFixed(2)}B` }
+                                ]}
+                            />
+                        </div>
                         <div className="text-white text-3xl font-bold">{metrics.ownerEarningsYield.toFixed(2)}%</div>
                         <div className="w-full bg-slate-800 h-2 rounded-full mt-4 overflow-hidden">
                             <div
@@ -239,7 +251,17 @@ export default function Dashboard({ data }: { data: AnalysisResult }) {
                 <CardContent className="space-y-4">
                     {/* Graham Number */}
                     <div className="flex justify-between items-center pb-2 border-b border-white/5 last:border-0">
-                        <span className="text-slate-400 text-sm">Graham Formula</span>
+                        <div className="flex items-center">
+                            <span className="text-slate-400 text-sm">Graham Formula</span>
+                            <FormulaTooltip
+                                formula="√(22.5 × EPS × Book Value)"
+                                description="Benjamin Graham's rule of thumb for finding the maximum fair price for a defensive stock."
+                                inputs={[
+                                    { label: 'EPS', value: `$${tickerData.eps.toFixed(2)}` },
+                                    { label: 'Book Value', value: `$${tickerData.bookValue.toFixed(2)}` }
+                                ]}
+                            />
+                        </div>
                         <div className="text-right">
                             <span className="text-white font-mono block">${metrics.grahamNumber.toFixed(2)}</span>
                             <span className={`text-xs ${metrics.grahamNumber > tickerData.price ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -250,18 +272,39 @@ export default function Dashboard({ data }: { data: AnalysisResult }) {
 
                     {/* Peter Lynch Value */}
                     <div className="flex justify-between items-center pb-2 border-b border-white/5 last:border-0">
-                        <span className="text-slate-400 text-sm">Peter Lynch Value</span>
+                        <div className="flex items-center">
+                            <span className="text-slate-400 text-sm">PEG Fair Value</span>
+                            <FormulaTooltip
+                                formula="EPS × (Growth Rate + Dividend Yield)"
+                                description="Peter Lynch believed fair P/E equals growth rate. We add dividend yield for total return potential."
+                                inputs={[
+                                    { label: 'EPS', value: `$${tickerData.eps.toFixed(2)}` },
+                                    { label: 'Growth Used', value: `${((metrics.dcfDetail?.usedGrowthRate || tickerData.earningsGrowth || 0) * 100).toFixed(1)}%` },
+                                    { label: 'Div Yield', value: `${tickerData.dividendYield.toFixed(2)}%` }
+                                ]}
+                            />
+                        </div>
                         <div className="text-right">
-                            <span className="text-white font-mono block">${metrics.peterLynchValue.toFixed(2)}</span>
-                            <span className={`text-xs ${metrics.peterLynchValue > tickerData.price ? 'text-emerald-400' : 'text-red-400'}`}>
-                                {metrics.peterLynchValue > tickerData.price ? 'Undervalued' : 'Overvalued'}
+                            <span className="text-white font-mono block">${metrics.pegFairValue.toFixed(2)}</span>
+                            <span className={`text-xs ${metrics.pegFairValue > tickerData.price ? 'text-emerald-400' : 'text-red-400'}`}>
+                                PEG: {metrics.pegRatio.toFixed(2)}
                             </span>
                         </div>
                     </div>
 
                     {/* DDM */}
                     <div className="flex justify-between items-center pb-2 border-b border-white/5 last:border-0">
-                        <span className="text-slate-400 text-sm">Dividend Model</span>
+                        <div className="flex items-center">
+                            <span className="text-slate-400 text-sm">Dividend Model</span>
+                            <FormulaTooltip
+                                formula="Next Dividend / (Discount Rate - Growth Rate)"
+                                description="Gordon Growth Model for stable dividend payers. Assumes 9% required return."
+                                inputs={[
+                                    { label: 'Dividend Rate', value: `$${tickerData.dividendRate.toFixed(2)}` },
+                                    { label: 'Est. Stable Growth', value: '3-4% (Capped)' }
+                                ]}
+                            />
+                        </div>
                         <div className="text-right">
                             <span className="text-white font-mono block">${metrics.ddmValue.toFixed(2)}</span>
                             <span className="text-xs text-slate-500 block">Stable Growth</span>
@@ -270,7 +313,18 @@ export default function Dashboard({ data }: { data: AnalysisResult }) {
 
                     {/* DCF (Primary) */}
                     <div className="flex justify-between items-center pt-2 border-t border-white/10">
-                        <span className="text-emerald-400 font-bold text-sm">DCF Value</span>
+                        <div className="flex items-center">
+                            <span className="text-emerald-400 font-bold text-sm">DCF Value</span>
+                            <FormulaTooltip
+                                formula="Σ (FCF / (1+r)^t) + Terminal Value"
+                                description="Discounted Cash Flow measures the present value of all expected future cash flows."
+                                inputs={[
+                                    { label: 'Free Cash Flow', value: `$${(tickerData.freeCashflow / 1e9).toFixed(2)}B` },
+                                    { label: 'Growth Rate', value: `${((metrics.dcfDetail?.usedGrowthRate || 0) * 100).toFixed(1)}%` },
+                                    { label: 'Discount Rate', value: '10%' }
+                                ]}
+                            />
+                        </div>
                         <span className="text-emerald-400 font-mono text-lg font-bold">${metrics.dcfValue.toFixed(2)}</span>
                     </div>
                 </CardContent>

@@ -33,6 +33,11 @@ export interface AnalysisResult {
         pegFairValue: number;
         pegRatio: number;
         ddmValue: number;
+        historicalValuations: {
+            date: string;
+            grahamNumber: number;
+            price: number; // Approximate price at that time
+        }[];
     };
     generalAnalysis?: GeneralAnalysis;
     historicalData?: { date: string; price: number }[];
@@ -191,7 +196,7 @@ export async function analyzeTicker(ticker: string, type: string = 'stocks', url
                 scrapedData,
                 generalAnalysis,
                 historicalData,
-                metrics: { grahamNumber: 0, dcfValue: 0, ownerEarningsYield: 0, pegFairValue: 0, pegRatio: 0, ddmValue: 0 }
+                metrics: { grahamNumber: 0, dcfValue: 0, ownerEarningsYield: 0, pegFairValue: 0, pegRatio: 0, ddmValue: 0, historicalValuations: [] }
             };
         }
 
@@ -210,8 +215,25 @@ export async function analyzeTicker(ticker: string, type: string = 'stocks', url
         if (rawGrowth > 0.15) rawGrowth = 0.15;
 
         const assumedGrowth = rawGrowth;
-        // Use dynamic discount rate based on CAPM (default beta = 1.0)
-        const assumedDiscount = calculateDiscountRate(1.0); // ~10.5% for market-average risk
+
+        // Dynamic Discount Rate Logic
+        // Priority: 1. Actual Beta, 2. Sector Average, 3. Market Default (1.0)
+        let beta = tickerData.beta;
+
+        if (!beta || beta === 0) {
+            // Sector-based proxies (approximate)
+            switch (tickerData.sector) {
+                case 'Technology': beta = 1.2; break;
+                case 'Utilities': beta = 0.5; break;
+                case 'Consumer Defensive': beta = 0.7; break;
+                case 'Energy': beta = 1.1; break;
+                case 'Financial Services': beta = 1.1; break;
+                case 'Healthcare': beta = 0.8; break;
+                default: beta = 1.0;
+            }
+        }
+
+        const assumedDiscount = calculateDiscountRate(beta);
 
         // Market Cap = Price * Shares. Shares = Market Cap / Price.
         const sharesOutstanding = tickerData.marketCap / tickerData.price;
@@ -244,6 +266,26 @@ export async function analyzeTicker(ticker: string, type: string = 'stocks', url
         // DDM
         const ddmValue = calculateDDM(tickerData.dividendRate, 0.03);
 
+        // Historical Valuation Analysis (Last 4 Years)
+        const historicalValuations = tickerData.financialsHistory?.map(item => {
+            const graham = calculateGrahamNumber(item.eps, item.bookValue);
+
+            // Find price at that approximate date (simple lookup)
+            const reportDate = new Date(item.date).getTime();
+            // Find closest price point
+            const closestPrice = historicalData.reduce((prev, curr) => {
+                const prevDiff = Math.abs(new Date(prev.date).getTime() - reportDate);
+                const currDiff = Math.abs(new Date(curr.date).getTime() - reportDate);
+                return currDiff < prevDiff ? curr : prev;
+            }, historicalData[0]);
+
+            return {
+                date: item.date,
+                grahamNumber: graham,
+                price: closestPrice ? closestPrice.price : 0 // Might be inaccurate if date range mismatch
+            };
+        }) || [];
+
         return {
             assetType: 'stocks',
             tickerData,
@@ -255,7 +297,8 @@ export async function analyzeTicker(ticker: string, type: string = 'stocks', url
                 ownerEarningsYield,
                 pegFairValue: pegResult.fairValue,
                 pegRatio: pegResult.pegRatio,
-                ddmValue
+                ddmValue,
+                historicalValuations
             },
             historicalData
         };
@@ -265,7 +308,7 @@ export async function analyzeTicker(ticker: string, type: string = 'stocks', url
             assetType: type as any,
             tickerData: null,
             scrapedData: null,
-            metrics: { grahamNumber: 0, dcfValue: 0, ownerEarningsYield: 0, pegFairValue: 0, pegRatio: 0, ddmValue: 0 },
+            metrics: { grahamNumber: 0, dcfValue: 0, ownerEarningsYield: 0, pegFairValue: 0, pegRatio: 0, ddmValue: 0, historicalValuations: [] },
             error: 'Failed to analyze'
         };
     }

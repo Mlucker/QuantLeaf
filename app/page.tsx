@@ -3,6 +3,7 @@ import TickerTrace from '@/components/TickerTrace';
 import Dashboard from '@/components/Dashboard';
 import AssetTabs from '@/components/AssetTabs';
 import MarketGrid from '@/components/MarketGrid';
+import WatchlistView from '@/components/WatchlistView';
 import { analyzeTicker } from '@/app/actions/getAnalysis';
 import { getMarketOverview } from '@/app/actions/getMarketOverview';
 
@@ -22,18 +23,40 @@ export default async function Home({
       content = <Dashboard data={analysisData} />;
     } else {
       // Browse Mode
+      let watchlistElement = <WatchlistView />;
+
       if (tab === 'stocks') {
         const { stocks } = await getMarketOverview('stocks');
-        content = <MarketGrid items={stocks || []} title="Market Movers (Mag 7)" />;
+        content = (
+          <>
+            {watchlistElement}
+            <MarketGrid items={stocks || []} title="Market Movers (Mag 7)" />
+          </>
+        );
       } else if (tab === 'bonds') {
         const { bonds } = await getMarketOverview('bonds');
-        content = <MarketGrid items={bonds || []} title="Government Bonds" />;
+        content = (
+          <>
+            {watchlistElement}
+            <MarketGrid items={bonds || []} title="Government Bonds" />
+          </>
+        );
       } else if (tab === 'commodities') {
         const { commodities } = await getMarketOverview('commodities');
-        content = <MarketGrid items={commodities || []} title="Key Commodities" />;
+        content = (
+          <>
+            {watchlistElement}
+            <MarketGrid items={commodities || []} title="Key Commodities" />
+          </>
+        );
       } else if (tab === 'indices') {
         const { indices } = await getMarketOverview('indices');
-        content = <MarketGrid items={indices || []} title="Major Indices" />;
+        content = (
+          <>
+            {watchlistElement}
+            <MarketGrid items={indices || []} title="Major Indices" />
+          </>
+        );
       }
     }
   }
@@ -48,9 +71,6 @@ export default async function Home({
 
         <AssetTabs />
 
-
-
-        {/* Search Bar enabled for all asset classes */}
         <TickerTrace />
 
         <Suspense fallback={<div className="text-center text-slate-500 mt-10">Loading Data...</div>}>

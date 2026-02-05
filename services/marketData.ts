@@ -20,6 +20,13 @@ export interface TickerData {
     earningsGrowth: number; // percentage
     revenueGrowth: number; // percentage
     freeCashflow: number;
+    beta: number;
+    sector: string;
+    financialsHistory: {
+        date: string;
+        eps: number;
+        bookValue: number;
+    }[];
 }
 
 export interface BondData {
@@ -39,16 +46,31 @@ export interface IndexData {
     change: number;
 }
 
-export const getTickerData = async (symbol: string): Promise<TickerData | null> => {
+import { unstable_cache } from 'next/cache';
+
+const fetchTickerData = async (symbol: string): Promise<TickerData | null> => {
     try {
         const quote: any = await yahooFinance.quoteSummary(symbol, {
-            modules: ['price', 'defaultKeyStatistics', 'financialData', 'cashflowStatementHistory', 'summaryDetail']
+            modules: [
+                'price',
+                'defaultKeyStatistics',
+                'financialData',
+                'cashflowStatementHistory',
+                'summaryDetail',
+                'summaryProfile',
+                'incomeStatementHistory',
+                'balanceSheetHistory'
+            ]
         });
 
         const price = quote.price?.regularMarketPrice || 0;
         const eps = quote.defaultKeyStatistics?.trailingEps || 0;
         const bookValue = quote.defaultKeyStatistics?.bookValue || 0;
         const marketCap = quote.price?.marketCap || 0;
+
+        // Fetch Beta and Sector
+        const beta = quote.defaultKeyStatistics?.beta || quote.summaryDetail?.beta || 0;
+        const sector = quote.summaryProfile?.sector || 'Unknown';
 
         const cashflow = quote.cashflowStatementHistory?.cashflowStatements?.[0]; // Most recent year
 
@@ -74,6 +96,36 @@ export const getTickerData = async (symbol: string): Promise<TickerData | null> 
         const earningsGrowth = (quote.financialData?.earningsGrowth || 0); // Decimal format usually
         const revenueGrowth = (quote.financialData?.revenueGrowth || 0);
 
+        // Historical Financials for Valuation Chart (Last 4 Years)
+        const incomeStatements = quote.incomeStatementHistory?.incomeStatementHistory || [];
+        const balanceSheets = quote.balanceSheetHistory?.balanceSheetStatements || [];
+
+        // Shares Outstanding is needed to calculate historical per-share metrics. 
+        // We use current shares as fallback if historical basicAverageShares is missing.
+        const currentShares = quote.defaultKeyStatistics?.sharesOutstanding || 1;
+
+        const financialsHistory = incomeStatements.map((income: any, index: number) => {
+            const date = income.endDate ? new Date(income.endDate).toISOString().split('T')[0] : 'Unknown';
+            const balanceSheet = balanceSheets[index] || {}; // Assumes aligned arrays (usually true for annual)
+
+            // Historical EPS (Net Income / Shares) - Prefer reported Basic EPS if available
+            // Note: simple EPS = netIncome / basicAverageShares
+            // If historical shares missing, use current shares (approximation)
+            const histShares = income.basicAverageShares || currentShares;
+            const histNetIncome = income.netIncome || 0;
+            const histEPS = histNetIncome / histShares;
+
+            // Historical Book Value (Equity / Shares)
+            const histEquity = balanceSheet.totalStockholderEquity || 0;
+            const histBVPS = histEquity / histShares;
+
+            return {
+                date,
+                eps: histEPS,
+                bookValue: histBVPS
+            };
+        }).reverse(); // Chronological order (Oldest -> Newest)
+
         const freeCashflow = quote.financialData?.freeCashflow || 0;
 
         return {
@@ -92,13 +144,22 @@ export const getTickerData = async (symbol: string): Promise<TickerData | null> 
             dividendYield,
             earningsGrowth,
             revenueGrowth,
-            freeCashflow
+            freeCashflow,
+            beta,
+            sector,
+            financialsHistory
         };
     } catch (error) {
         console.error(`Error fetching data for ${symbol}:`, error);
         return null;
     }
 };
+
+export const getTickerData = unstable_cache(
+    async (symbol: string) => fetchTickerData(symbol),
+    ['ticker-data'],
+    { revalidate: 1800 } // 30 minutes
+);
 
 export const getBondData = async (symbol: string): Promise<BondData | null> => {
     try {

@@ -1,10 +1,13 @@
 import { AnalysisResult } from '@/app/actions/getAnalysis';
 import IntrinsicGauge from './IntrinsicGauge';
 import PriceChart from './PriceChart';
+import HistoricalValuationChart from './HistoricalValuationChart';
 import TimeRangeFilter from './TimeRangeFilter';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ArrowRight } from 'lucide-react';
+import WatchlistButton from './WatchlistButton';
 import FormulaTooltip from './FormulaTooltip';
+import Link from 'next/link';
 
 export default function Dashboard({ data }: { data: AnalysisResult }) {
     if (data.error) {
@@ -159,13 +162,31 @@ export default function Dashboard({ data }: { data: AnalysisResult }) {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mt-8">
             {/* Col 1: Ticker Info */}
             <Card className="glass-panel ring-0 border-none bg-transparent">
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle className="text-slate-400 text-sm font-semibold uppercase tracking-wider">Ticker Profile</CardTitle>
+                    <Link
+                        href={`/compare?q=${tickerData.symbol}`}
+                        className="text-xs text-slate-500 hover:text-emerald-400 flex items-center gap-1 transition-colors"
+                        title="Compare with others"
+                    >
+                        Compare <ArrowRight size={12} />
+                    </Link>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-white text-4xl font-bold">{tickerData.symbol}</div>
+                    <div className="flex justify-between items-start">
+                        <div className="text-white text-4xl font-bold">{tickerData.symbol}</div>
+                        <WatchlistButton symbol={tickerData.symbol} />
+                    </div>
                     <div className="text-emerald-400 text-2xl font-bold mt-2">${tickerData.price.toFixed(2)}</div>
                     <div className="mt-8 space-y-4">
+                        <div className="flex justify-between items-center py-2 border-b border-white/5">
+                            <span className="text-slate-400 text-sm">Beta (5Y)</span>
+                            <span className="text-white font-mono">{tickerData.beta?.toFixed(2) || '1.00'}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-2 border-b border-white/5">
+                            <span className="text-slate-400 text-sm">Sector</span>
+                            <span className="text-white font-mono truncate max-w-[150px] text-right" title={tickerData.sector}>{tickerData.sector || 'Unknown'}</span>
+                        </div>
                         <div className="flex justify-between items-center py-2 border-b border-white/5">
                             <span className="text-slate-400 text-sm">Market Cap</span>
                             <span className="text-white font-mono">${(tickerData.marketCap / 1e9).toFixed(2)}B</span>
@@ -329,6 +350,21 @@ export default function Dashboard({ data }: { data: AnalysisResult }) {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Historical Valuation Chart */}
+            {metrics.historicalValuations && metrics.historicalValuations.length > 0 && (
+                <Card className="col-span-1 md:col-span-2 xl:col-span-4 glass-panel border-white/10 mt-6">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-slate-400 text-sm font-semibold uppercase tracking-wider">Historical Valuation Trend</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="mb-4">
+                            <p className="text-sm text-slate-400">Comparing annual average Price vs. Intrinsic Value (Graham Number) over the last 4 years.</p>
+                        </div>
+                        <HistoricalValuationChart data={metrics.historicalValuations} />
+                    </CardContent>
+                </Card>
+            )}
 
 
             {/* Row 2: Deep Dive Analysis */}

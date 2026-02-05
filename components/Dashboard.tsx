@@ -1,17 +1,34 @@
 import { AnalysisResult } from '@/app/actions/getAnalysis';
 import IntrinsicGauge from './IntrinsicGauge';
+import PriceChart from './PriceChart';
+import TimeRangeFilter from './TimeRangeFilter';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { AlertTriangle } from 'lucide-react';
 
 export default function Dashboard({ data }: { data: AnalysisResult }) {
     if (data.error) {
         return (
-            <div className="text-center text-red-400 mt-10">
-                {data.error || 'No data available'}
+            <div className="flex justify-center mt-10">
+                <Card className="max-w-md w-full glass-panel border-amber-500/20 bg-amber-500/5">
+                    <CardHeader className="flex flex-row items-center space-x-4 pb-2">
+                        <div className="w-10 h-10 bg-amber-500/10 rounded-full flex items-center justify-center">
+                            <AlertTriangle className="w-5 h-5 text-amber-500" />
+                        </div>
+                        <div>
+                            <CardTitle className="text-white text-lg">Analysis Unavailable</CardTitle>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-slate-400 text-sm">
+                            {data.error || 'Unable to retrieve data for this ticker. It might be delisted or the API is temporarily unavailable.'}
+                        </p>
+                    </CardContent>
+                </Card>
             </div>
         );
     }
 
-    const { tickerData, metrics, scrapedData, assetType, bondData, indexData, commodityData } = data;
+    const { tickerData, metrics, scrapedData, assetType, bondData, indexData, commodityData, historicalData } = data;
 
     // --- NON-STOCK VIEW (Simple Dashboard) ---
     if (assetType !== 'stocks') {
@@ -43,26 +60,93 @@ export default function Dashboard({ data }: { data: AnalysisResult }) {
                             </div>
                             <div className="text-slate-500 text-sm">Today's Change</div>
                         </div>
+
+                        {/* Chart for Non-Stocks */}
+                        {historicalData && (
+                            <div className="mt-8 pt-6 border-t border-white/5">
+                                <div className="flex justify-between items-center mb-4">
+                                    <div className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Price History</div>
+                                    <TimeRangeFilter />
+                                </div>
+                                <div className="h-[200px] -mx-4">
+                                    <PriceChart data={historicalData} color={item.change >= 0 ? "#10b981" : "#ef4444"} />
+                                </div>
+                            </div>
+                        )}
+                        {data.generalAnalysis?.customMetric && (
+                            <div className="mt-8 border-t border-white/5 pt-4">
+                                <div className="text-slate-400 text-xs uppercase tracking-wider font-semibold mb-1">{data.generalAnalysis.customMetric.label}</div>
+                                <div className={`text-2xl font-bold ${data.generalAnalysis.sentiment === 'Bullish' ? 'text-emerald-400' : (data.generalAnalysis.sentiment === 'Bearish' ? 'text-red-400' : 'text-slate-200')}`}>
+                                    {data.generalAnalysis.customMetric.value}
+                                </div>
+                                <div className="text-slate-500 text-xs mt-1">{data.generalAnalysis.customMetric.description}</div>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 
-                {scrapedData && (
-                    <Card className="glass-panel ring-0 border-none bg-transparent">
-                        <CardHeader>
-                            <CardTitle className="text-slate-400 text-sm font-semibold uppercase tracking-wider">Market Context</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-slate-200 text-sm leading-relaxed">
-                                {scrapedData.title}
-                            </div>
-                            <div className="mt-4 text-xs text-slate-500">
-                                Global market data provided for informational purposes.
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
+                <div className="space-y-6">
+                    {/* Analysis Panel */}
+                    {data.generalAnalysis && (
+                        <Card className="glass-panel ring-0 border-none bg-transparent">
+                            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                <CardTitle className="text-slate-400 text-sm font-semibold uppercase tracking-wider">Analysis</CardTitle>
+                                <div className={`px-2 py-1 rounded text-xs font-bold uppercase tracking-wider
+                                    ${data.generalAnalysis.sentiment === 'Bullish' ? 'bg-emerald-500/10 text-emerald-400' :
+                                        (data.generalAnalysis.sentiment === 'Bearish' ? 'bg-red-500/10 text-red-400' : 'bg-slate-500/10 text-slate-400')}`}>
+                                    {data.generalAnalysis.sentiment}
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-4">
+                                    <div>
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-slate-200 font-medium">Rating</span>
+                                            <span className="text-white font-bold">{data.generalAnalysis.rating}</span>
+                                        </div>
+                                        <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                            <div
+                                                className={`h-full rounded-full ${data.generalAnalysis.score > 66 ? 'bg-emerald-500' : (data.generalAnalysis.score > 33 ? 'bg-yellow-500' : 'bg-red-500')}`}
+                                                style={{ width: `${data.generalAnalysis.score}%` }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-4 border-t border-white/5">
+                                        <div className="text-slate-400 text-xs uppercase tracking-wider font-semibold mb-3">Key Takeaways</div>
+                                        <ul className="space-y-2">
+                                            {data.generalAnalysis.keyPoints.map((point, idx) => (
+                                                <li key={idx} className="text-sm text-slate-300 flex items-start">
+                                                    <span className="text-emerald-500 mr-2">•</span>
+                                                    {point}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {scrapedData && (
+                        <Card className="glass-panel ring-0 border-none bg-transparent">
+                            <CardHeader>
+                                <CardTitle className="text-slate-400 text-sm font-semibold uppercase tracking-wider">Market Context</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-slate-200 text-sm leading-relaxed">
+                                    {scrapedData.title}
+                                </div>
+                                <div className="mt-4 text-xs text-slate-500">
+                                    Global market data provided for informational purposes.
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
             </div>
         );
+
     }
 
     // --- STOCK VIEW (Full Dashboard) ---
@@ -94,6 +178,19 @@ export default function Dashboard({ data }: { data: AnalysisResult }) {
                             <span className="text-white font-mono">${tickerData.bookValue.toFixed(2)}</span>
                         </div>
                     </div>
+
+                    {/* Chart for Stocks */}
+                    {historicalData && (
+                        <div className="mt-8 pt-6 border-t border-white/5">
+                            <div className="flex justify-between items-center mb-4">
+                                <div className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Price History</div>
+                                <TimeRangeFilter />
+                            </div>
+                            <div className="h-[150px] -mx-4">
+                                <PriceChart data={historicalData} color="#10b981" />
+                            </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 

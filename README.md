@@ -1,4 +1,25 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# QuantLeaf
+
+**Deterministic Fundamental Analysis Platform**
+
+QuantLeaf is a modern financial analysis tool designed to strip away the noise of technical analysis and market sentiment, focusing purely on the fundamental data that drives long-term value. Built with Next.js 15 and TypeScript, it provides instant, intrinsic value calculations for Stocks, Bonds, Indices, and Commodities.
+
+## Key Features
+
+- **Intrinsic Value Calculation**: Automatically calculates Graham Number, Peter Lynch Fair Value, and DCF models for any US stock.
+- **Multi-Asset Support**: specialized analysis for Stocks, Government Bonds, Major Indices, and Commodities.
+- **Interactive History**: Switch between 1-Year and 5-Year historical price data with dynamic charting.
+- **Zero-AI Hallucinations**: All analysis is deterministic, based on hard financial formulas and logic, not generative text.
+- **Instant Insights**: "Key Points" and "Sentiment" summaries generated from real-time data properties.
+
+## Tech Stack
+
+- **Framework**: [Next.js 15](https://nextjs.org/) (App Router)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/) & [Shadcn/ui](https://ui.shadcn.com/)
+- **Charts**: [Recharts](https://recharts.org/)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **Data**: Yahoo Finance API (via `yahoo-finance2`) & Cheerio for web scraping.
 
 ## Getting Started
 
@@ -8,29 +29,20 @@ First, run the development server:
 npm run dev
 # or
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `app/`: Next.js App Router pages and layouts.
+- `app/actions/`: Server Actions for data fetching and analysis logic.
+- `components/`: React UI components (Dashboard, Charts, Gauges).
+- `services/`: External API integrations and data transformation services.
+- `lib/financial/`: Pure functions for financial formulas (DCF, DDM, etc.).
 
-## Learn More
+## Philosophy
 
-To learn more about Next.js, take a look at the following resources:
+In an era of AI hype, QuantLeaf returns to the roots of value investing. It doesn't tell you *what* to buy; it gives you the mathematically correct value of an asset so you can make your own informed decision.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+> "Price is what you pay. Value is what you get." - Warren Buffett

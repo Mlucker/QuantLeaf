@@ -9,16 +9,16 @@ import { getMarketOverview } from '@/app/actions/getMarketOverview';
 export default async function Home({
   searchParams
 }: {
-  searchParams: Promise<{ ticker?: string, tab?: string }>
+  searchParams: Promise<{ ticker?: string, tab?: string, range?: string }>
 }) {
-  const { ticker, tab = 'stocks' } = await searchParams; // Default to stocks
+  const { ticker, tab = 'stocks', range = '1y' } = await searchParams; // Default to stocks
 
   // Logic switch based on Tab
   let content = null;
 
   if (tab === 'stocks' || tab === 'bonds' || tab === 'commodities' || tab === 'indices') {
     if (ticker) {
-      const analysisData = await analyzeTicker(ticker, tab);
+      const analysisData = await analyzeTicker(ticker, tab, undefined, range as '1y' | '5y');
       content = <Dashboard data={analysisData} />;
     } else {
       // Browse Mode
@@ -48,8 +48,10 @@ export default async function Home({
 
         <AssetTabs />
 
-        {/* Only show TickerTrace if in Stocks tab */}
-        {tab === 'stocks' && <TickerTrace />}
+
+
+        {/* Search Bar enabled for all asset classes */}
+        <TickerTrace />
 
         <Suspense fallback={<div className="text-center text-slate-500 mt-10">Loading Data...</div>}>
           {content}

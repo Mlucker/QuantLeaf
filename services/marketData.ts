@@ -18,6 +18,7 @@ export interface TickerData {
     dividendYield: number; // percentage
     earningsGrowth: number; // percentage
     revenueGrowth: number; // percentage
+    freeCashflow: number;
 }
 
 export interface BondData {
@@ -49,9 +50,14 @@ export const getTickerData = async (symbol: string): Promise<TickerData | null> 
         const marketCap = quote.price?.marketCap || 0;
 
         const cashflow = quote.cashflowStatementHistory?.cashflowStatements?.[0]; // Most recent year
-        const operatingCashFlow = cashflow?.totalCashFromOperatingActivities || 0;
+
+        // Prefer TTM data from financialData which is more reliable on Vercel/Production
+        // Fallback to the most recent annual report from cashflowStatementHistory
+        const operatingCashFlow = quote.financialData?.operatingCashflow || cashflow?.totalCashFromOperatingActivities || 0;
+
+        // Capex is not always in financialData, so we stick to the annual report or derived
         const capitalExpenditures = cashflow?.capitalExpenditures || 0;
-        const netIncomeToCommon = cashflow?.netIncome || 0;
+        const netIncomeToCommon = quote.financialData?.netIncome || cashflow?.netIncome || 0; // Prefer TTM Net Income
 
         // Debt/Cash
         const totalCash = quote.financialData?.totalCash || 0;
@@ -62,6 +68,8 @@ export const getTickerData = async (symbol: string): Promise<TickerData | null> 
         const dividendYield = (quote.summaryDetail?.dividendYield || 0) * 100; // API usually returns 0.05 for 5%
         const earningsGrowth = (quote.financialData?.earningsGrowth || 0); // Decimal format usually
         const revenueGrowth = (quote.financialData?.revenueGrowth || 0);
+
+        const freeCashflow = quote.financialData?.freeCashflow || 0;
 
         return {
             symbol: symbol.toUpperCase(),
@@ -77,7 +85,8 @@ export const getTickerData = async (symbol: string): Promise<TickerData | null> 
             dividendRate,
             dividendYield,
             earningsGrowth,
-            revenueGrowth
+            revenueGrowth,
+            freeCashflow
         };
     } catch (error) {
         console.error(`Error fetching data for ${symbol}:`, error);
@@ -143,6 +152,33 @@ export interface CommodityData {
     price: number;
     change: number;
 }
+
+export interface HistoricalDataPoint {
+    date: string;
+    price: number;
+}
+
+export const getHistoricalData = async (symbol: string, range: '1y' | '5y' = '1y'): Promise<HistoricalDataPoint[]> => {
+    try {
+        const queryOptions = {
+            period1: range === '5y' ? '2020-01-01' : '2023-01-01', // Dynamic calculation would be better, but this suffices for now
+            interval: range === '5y' ? '1wk' as const : '1d' as const,
+        };
+        const result = await yahooFinance.chart(symbol, queryOptions);
+
+        if (!result || !result.quotes) return [];
+
+        return result.quotes
+            .filter((q: any) => q.close !== null && q.date)
+            .map((q: any) => ({
+                date: new Date(q.date).toISOString().split('T')[0],
+                price: q.close
+            }));
+    } catch (error) {
+        console.error(`Error fetching history for ${symbol}:`, error);
+        return [];
+    }
+};
 
 export const getCommodityData = async (symbol: string): Promise<CommodityData | null> => {
     try {

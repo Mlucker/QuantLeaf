@@ -1,0 +1,60 @@
+import { Suspense } from 'react';
+import TickerTrace from '@/components/TickerTrace';
+import Dashboard from '@/components/Dashboard';
+import AssetTabs from '@/components/AssetTabs';
+import MarketGrid from '@/components/MarketGrid';
+import { analyzeTicker } from '@/app/actions/getAnalysis';
+import { getMarketOverview } from '@/app/actions/getMarketOverview';
+
+export default async function Home({
+  searchParams
+}: {
+  searchParams: Promise<{ ticker?: string, tab?: string }>
+}) {
+  const { ticker, tab = 'stocks' } = await searchParams; // Default to stocks
+
+  // Logic switch based on Tab
+  let content = null;
+
+  if (tab === 'stocks' || tab === 'bonds' || tab === 'commodities' || tab === 'indices') {
+    if (ticker) {
+      const analysisData = await analyzeTicker(ticker, tab);
+      content = <Dashboard data={analysisData} />;
+    } else {
+      // Browse Mode
+      if (tab === 'stocks') {
+        const { stocks } = await getMarketOverview('stocks');
+        content = <MarketGrid items={stocks || []} title="Market Movers (Mag 7)" />;
+      } else if (tab === 'bonds') {
+        const { bonds } = await getMarketOverview('bonds');
+        content = <MarketGrid items={bonds || []} title="Government Bonds" />;
+      } else if (tab === 'commodities') {
+        const { commodities } = await getMarketOverview('commodities');
+        content = <MarketGrid items={commodities || []} title="Key Commodities" />;
+      } else if (tab === 'indices') {
+        const { indices } = await getMarketOverview('indices');
+        content = <MarketGrid items={indices || []} title="Major Indices" />;
+      }
+    }
+  }
+
+  return (
+    <main className="min-h-screen bg-slate-950 text-white p-6">
+      <div className="max-w-7xl mx-auto">
+        <header className="mb-10 text-center">
+          <h1 className="text-4xl font-bold tracking-tight text-emerald-500 mb-2">QuantLeaf</h1>
+          <p className="text-slate-400">Deterministic Fundamental Analysis</p>
+        </header>
+
+        <AssetTabs />
+
+        {/* Only show TickerTrace if in Stocks tab */}
+        {tab === 'stocks' && <TickerTrace />}
+
+        <Suspense fallback={<div className="text-center text-slate-500 mt-10">Loading Data...</div>}>
+          {content}
+        </Suspense>
+      </div>
+    </main>
+  );
+}

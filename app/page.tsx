@@ -4,6 +4,7 @@ import Dashboard from '@/components/Dashboard';
 import AssetTabs from '@/components/AssetTabs';
 import MarketGrid from '@/components/MarketGrid';
 import WatchlistView from '@/components/WatchlistView';
+import Header from '@/components/Header';
 import { analyzeTicker } from '@/app/actions/getAnalysis';
 import { getMarketOverview } from '@/app/actions/getMarketOverview';
 
@@ -64,10 +65,8 @@ export default async function Home({
   return (
     <main className="min-h-screen bg-slate-950 text-white p-6">
       <div className="max-w-7xl mx-auto">
-        <header className="mb-10 text-center">
-          <h1 className="text-4xl font-bold tracking-tight text-emerald-500 mb-2">QuantLeaf</h1>
-          <p className="text-slate-400">Deterministic Fundamental Analysis</p>
-        </header>
+
+        <Header />
 
         <AssetTabs />
 

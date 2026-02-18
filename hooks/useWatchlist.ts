@@ -28,16 +28,44 @@ export function useWatchlist() {
         }
     }, [watchlist, isLoaded]);
 
-    const addToWatchlist = (symbol: string) => {
+
+    // Sync with database when loaded
+    useEffect(() => {
+        if (isLoaded) {
+            import('@/app/actions/watchlist').then(({ syncWatchlist }) => {
+                syncWatchlist(watchlist).then(merged => {
+                    // Only update if different to avoid loops
+                    if (JSON.stringify(merged) !== JSON.stringify(watchlist)) {
+                        setWatchlist(merged);
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+                    }
+                });
+            });
+        }
+    }, [isLoaded]); // Run once when loaded (and user auth state changes implicitly via server action access)
+
+    // We need to wrap db actions to not fail if not logged in
+    const addToWatchlist = async (symbol: string) => {
         const upper = symbol.toUpperCase();
         if (!watchlist.includes(upper)) {
-            setWatchlist(prev => [...prev, upper]);
+            const newList = [...watchlist, upper];
+            setWatchlist(newList); // Optimistic update
+
+            // Try to add to DB
+            import('@/app/actions/watchlist').then(({ addToWatchlistDB }) => {
+                addToWatchlistDB(upper);
+            });
         }
     };
 
-    const removeFromWatchlist = (symbol: string) => {
+    const removeFromWatchlist = async (symbol: string) => {
         const upper = symbol.toUpperCase();
-        setWatchlist(prev => prev.filter(t => t !== upper));
+        setWatchlist(prev => prev.filter(t => t !== upper)); // Optimistic update
+
+        // Try to remove from DB
+        import('@/app/actions/watchlist').then(({ removeFromWatchlistDB }) => {
+            removeFromWatchlistDB(upper);
+        });
     };
 
     const isInWatchlist = (symbol: string) => {

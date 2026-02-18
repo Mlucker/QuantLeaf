@@ -8,7 +8,7 @@ export default async function Header() {
     return (
         <header className="mb-10 relative">
             <div className="absolute right-0 top-0">
-                {session ? (
+                {session?.user ? (
                     <div className="flex items-center gap-4">
                         <span className="text-sm text-slate-400 hidden sm:inline">
                             {session.user?.email}
@@ -16,7 +16,7 @@ export default async function Header() {
                         <form
                             action={async () => {
                                 'use server';
-                                await signOut();
+                                await signOut({ redirectTo: '/' });
                             }}
                         >
                             <button className="text-sm text-emerald-400 hover:text-emerald-300 transition-colors">

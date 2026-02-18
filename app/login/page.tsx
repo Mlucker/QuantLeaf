@@ -11,7 +11,7 @@ function LoginButton() {
 
     return (
         <button
-            className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+            className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 relative z-10"
             aria-disabled={pending}
         >
             {pending ? 'Logging in...' : 'Log in'}
@@ -23,15 +23,15 @@ export default function LoginPage() {
     const [errorMessage, dispatch] = useActionState(authenticate, undefined);
 
     return (
-        <div className="flex min-h-screen flex-col items-center justify-center p-24">
-            <div className="w-full max-w-md space-y-8 glass-panel p-8 border border-white/10 rounded-xl">
+        <div className="flex min-h-screen flex-col items-center justify-center p-6 sm:p-24">
+            <div className="w-full max-w-md space-y-8 glass-panel p-8 border border-white/10 rounded-xl relative z-0">
                 <div>
                     <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-white">
                         Sign in to your account
                     </h2>
                     <p className="mt-2 text-center text-sm text-slate-400">
                         Or{' '}
-                        <Link href="/register" className="font-medium text-emerald-400 hover:text-emerald-300">
+                        <Link href="/register" className="font-medium text-emerald-400 hover:text-emerald-300 relative z-10">
                             create a new account
                         </Link>
                     </p>
@@ -53,7 +53,7 @@ export default function LoginPage() {
                                 type="email"
                                 autoComplete="email"
                                 required
-                                className="relative block w-full rounded-t-md border-0 bg-white/5 py-1.5 text-white ring-1 ring-inset ring-white/10 placeholder:text-slate-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-emerald-500 sm:text-sm sm:leading-6 px-3"
+                                className="relative block w-full rounded-t-md border-0 bg-white/5 py-2 text-white ring-1 ring-inset ring-white/10 placeholder:text-slate-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-emerald-500 sm:text-sm sm:leading-6 px-3"
                                 placeholder="Email address"
                             />
                         </div>
@@ -67,13 +67,13 @@ export default function LoginPage() {
                                 type="password"
                                 autoComplete="current-password"
                                 required
-                                className="relative block w-full rounded-b-md border-0 bg-white/5 py-1.5 text-white ring-1 ring-inset ring-white/10 placeholder:text-slate-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-emerald-500 sm:text-sm sm:leading-6 px-3"
+                                className="relative block w-full rounded-b-md border-0 bg-white/5 py-2 text-white ring-1 ring-inset ring-white/10 placeholder:text-slate-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-emerald-500 sm:text-sm sm:leading-6 px-3"
                                 placeholder="Password"
                             />
                         </div>
                     </div>
 
-                    <div>
+                    <div className="pt-2">
                         <LoginButton />
                     </div>
                 </form>
